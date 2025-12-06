@@ -27,10 +27,10 @@ jobs:
       run: dotnet build --configuration Release
       
     - name: Run unit tests
-      run: dotnet test src/test/Betsson.OnlineWallets.UnitTests/Betsson.OnlineWallets.UnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests-results.trx" --no-restore
+      run: dotnet test src/test/Betsson.OnlineWallets.UnitTests/Betsson.OnlineWallets.UnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests-results.trx"
       
     - name: Run integration tests
-      run: dotnet test src/test/Betsson.OnlineWallets.IntegrationTests/Betsson.OnlineWallets.IntegrationTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests-results.trx" --no-restore
+      run: dotnet test src/test/Betsson.OnlineWallets.IntegrationTests/Betsson.OnlineWallets.IntegrationTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests-results.trx" 
       
     - name: Upload test results
       if: always()
