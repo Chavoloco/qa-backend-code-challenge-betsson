@@ -39,13 +39,6 @@ jobs:
         name: test-results
         path: '**/TestResults/**'
         
-    - name: Publish test results
-      if: always()
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      with:
-        files: '**/TestResults/**/*.trx'
-        check_name: Test Results
-        comment_mode: always
 
   build-docker-image:
     runs-on: ubuntu-latest
