@@ -217,5 +217,67 @@ namespace Betsson.OnlineWallets.UnitTests.Services
         }
 
         #endregion
+        #region GetBalanceAsync Tests
+
+        [Fact]
+        [Trait("Feature", "Balance")]
+        public async Task GetBalanceAsync_WhenNoTransactionsExist_ReturnsZeroBalance()
+        {
+            var fixture = OnlineWalletFixture.Create();
+            fixture.MockRepository
+                .Setup(r => r.GetLastOnlineWalletEntryAsync())
+                .ReturnsAsync((Betsson.OnlineWallets.Data.Models.OnlineWalletEntry?)null);
+
+            var service = new OnlineWalletService(fixture.MockRepository.Object);
+
+            var balance = await service.GetBalanceAsync();
+
+            balance.Amount.Should().Be(0);
+            fixture.MockRepository.Verify(r => r.GetLastOnlineWalletEntryAsync(), Times.Once);
+        }
+
+        [Fact]
+        [Trait("Feature", "Balance")]
+        public async Task GetBalanceAsync_WhenTransactionsExist_ReturnsCorrectBalance()
+        {
+            var fixture = OnlineWalletFixture.Create();
+            var lastEntry = OnlineWalletEntryBuilder.AnOnlineWalletEntry()
+                .WithBalanceBefore(100)
+                .WithAmount(50)
+                .Build();
+
+            fixture.MockRepository
+                .Setup(r => r.GetLastOnlineWalletEntryAsync())
+                .ReturnsAsync(lastEntry);
+
+            var service = new OnlineWalletService(fixture.MockRepository.Object);
+
+            var balance = await service.GetBalanceAsync();
+
+            balance.Amount.Should().Be(150);
+        }
+
+        [Fact]
+        [Trait("Feature", "Balance")]
+        public async Task GetBalanceAsync_WithNegativeAmount_CalculatesCorrectly()
+        {
+            var fixture = OnlineWalletFixture.Create();
+            var lastEntry = OnlineWalletEntryBuilder.AnOnlineWalletEntry()
+                .WithBalanceBefore(200)
+                .WithAmount(-50)
+                .Build();
+
+            fixture.MockRepository
+                .Setup(r => r.GetLastOnlineWalletEntryAsync())
+                .ReturnsAsync(lastEntry);
+
+            var service = new OnlineWalletService(fixture.MockRepository.Object);
+
+            var balance = await service.GetBalanceAsync();
+
+            balance.Amount.Should().Be(150);
+        }
+
+        #endregion
     }
 }
