@@ -24,7 +24,7 @@ jobs:
       run: dotnet restore
       
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --configuration Release
       
     - name: Run unit tests
       run: dotnet test src/test/Betsson.OnlineWallets.UnitTests/Betsson.OnlineWallets.UnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests-results.trx" --no-restore
