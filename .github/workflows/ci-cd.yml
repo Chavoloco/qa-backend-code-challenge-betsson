@@ -1,0 +1,80 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'test/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --configuration Release
+      
+    - name: Run unit tests
+      run: dotnet test src/test/Betsson.OnlineWallets.UnitTests/Betsson.OnlineWallets.UnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests-results.trx"
+      
+    - name: Run integration tests
+      run: dotnet test src/test/Betsson.OnlineWallets.IntegrationTests/Betsson.OnlineWallets.IntegrationTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests-results.trx" 
+      
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: '**/TestResults/**'
+        
+
+  build-docker-image:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker image
+      run: docker build -f src/Betsson.OnlineWallets.Web/Dockerfile -t betsson-online-wallets:latest .
+      
+    - name: Run Docker image smoke test
+      run: |
+        docker run -d --name wallet-test -p 8080:8080 betsson-online-wallets:latest
+        sleep 5
+        curl -f http://localhost:8080/health || exit 1
+        docker stop wallet-test || true
+      continue-on-error: true
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Install dotnet-format
+      run: dotnet tool install -g dotnet-format
+      
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+      continue-on-error: true
