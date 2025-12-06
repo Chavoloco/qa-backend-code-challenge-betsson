@@ -54,7 +54,6 @@ namespace Betsson.OnlineWallets.IntegrationTests.Controllers
         }
 
         #endregion
-
         #region POST /OnlineWallet/Deposit Tests
 
         [Fact]
@@ -145,6 +144,98 @@ namespace Betsson.OnlineWallets.IntegrationTests.Controllers
             var response = await client!.PostAsync("/OnlineWallet/Deposit", jsonContent);
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        #endregion
+        #region POST /OnlineWallet/Withdraw Tests
+
+        [Fact]
+        [Trait("Endpoint", "Withdraw")]
+        [Trait("Method", "POST")]
+        [Trait("Category", "Happy Path")]
+        public async Task Withdraw_POST_WithSufficientBalance_ReturnsOk()
+        {
+            var client = _fixture.Client;
+
+            var deposit = new DepositRequest { Amount = 100m };
+            var depositContent = new StringContent(
+                JsonSerializer.Serialize(deposit),
+                Encoding.UTF8,
+                "application/json");
+            await client!.PostAsync("/OnlineWallet/Deposit", depositContent);
+
+            var withdrawalRequest = new WithdrawalRequest { Amount = 50m };
+            var withdrawalContent = new StringContent(
+                JsonSerializer.Serialize(withdrawalRequest),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await client!.PostAsync("/OnlineWallet/Withdraw", withdrawalContent);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            
+            var content = await response.Content.ReadAsStringAsync();
+            var balanceResponse = JsonSerializer.Deserialize<BalanceResponse>(content, _jsonOptions);
+            balanceResponse.Should().NotBeNull();
+            balanceResponse!.Amount.Should().BeGreaterThanOrEqualTo(0);
+        }
+
+        [Fact]
+        [Trait("Endpoint", "Withdraw")]
+        [Trait("Method", "POST")]
+        [Trait("Category", "Error")]
+        public async Task Withdraw_POST_WithInsufficientBalance_ReturnsBadRequest()
+        {
+            var client = _fixture.Client;
+            var withdrawalRequest = new WithdrawalRequest { Amount = 10000m };
+            var jsonContent = new StringContent(
+                JsonSerializer.Serialize(withdrawalRequest),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await client!.PostAsync("/OnlineWallet/Withdraw", jsonContent);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        [Trait("Endpoint", "Withdraw")]
+        [Trait("Method", "POST")]
+        [Trait("Category", "Happy Path")]
+        public async Task Withdraw_POST_ExactBalance_DecreasesToZero()
+        {
+            var client = _fixture.Client;
+
+            var balanceResponse = await client!.GetAsync("/OnlineWallet/Balance");
+
+            var balanceContent = await balanceResponse.Content.ReadAsStringAsync();
+            var balanceAmount = JsonSerializer.Deserialize<BalanceResponse>(balanceContent, _jsonOptions);
+            var exactAmount = balanceAmount!.Amount;
+
+            if (exactAmount == 0)
+            {
+                var depositForExact = new DepositRequest { Amount = 100m };
+                var depositContentForExact = new StringContent(
+                    JsonSerializer.Serialize(depositForExact),
+                    Encoding.UTF8,
+                    "application/json");
+                await client.PostAsync("/OnlineWallet/Deposit", depositContentForExact);
+                exactAmount = 100m;
+            }
+
+            var withdrawal = new WithdrawalRequest { Amount = exactAmount };
+            var withdrawalContent = new StringContent(
+                JsonSerializer.Serialize(withdrawal),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await client!.PostAsync("/OnlineWallet/Withdraw", withdrawalContent);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            
+            var content = await response.Content.ReadAsStringAsync();
+            var finalBalanceResponse = JsonSerializer.Deserialize<BalanceResponse>(content, _jsonOptions);
+            finalBalanceResponse!.Amount.Should().Be(0);
         }
 
         #endregion
