@@ -125,7 +125,7 @@ namespace Betsson.OnlineWallets.IntegrationTests.Controllers
 
             var response = await client!.PostAsync("/OnlineWallet/Deposit", jsonContent);
 
-            response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
         [Fact]
